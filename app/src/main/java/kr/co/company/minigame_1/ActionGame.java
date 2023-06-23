@@ -19,6 +19,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     private GameThread gameThread;
     private Joystick joystick;
     private Player player;
+    private Weapon weapon;
     private List<Enemy> enemies;
     private Paint playerHealthBarPaint;
     private List<Paint> enemyHealthBarPaints;
@@ -31,6 +32,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         super(context);
         getHolder().addCallback(this);
         player = new Player();
+        weapon = new Weapon(player);
         enemies = new ArrayList<>();
 
         playerHealthBarPaint = new Paint();
@@ -122,6 +124,11 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void update() {
+
+        // 무기 업데이트
+        weapon.updatePlayerPosition(player.positionX, player.positionY);
+        weapon.update();
+
         // 적 생성
         if(enemies.size()<5){
             Random random = new Random();
@@ -137,6 +144,13 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
             Enemy enemy = iterator.next();
             if (enemy.getHealth() <= 0) {
                 iterator.remove();
+            } else if (weapon.isCollidingWith(enemy)) {
+                if (!enemy.isInvincible()) { // 적이 무적 상태가 아닌 경우에만 충돌 처리
+                    // 무기와 적 충돌 시 체력 감소
+                    enemy.decreaseHealth(10);
+                    // 충돌한 적은 잠시 무적시간
+                    enemy.handleCollision(player);
+                }
             } else if (player.isCollidingWith(enemy)) {
                 if (!enemy.isInvincible()) { // 적이 무적 상태가 아닌 경우에만 충돌 처리
                     // 플레이어와 적 충돌 시 체력 감소
@@ -145,9 +159,6 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
                     // 충돌한 적은 잠시 무적시간
                     enemy.handleCollision(player);
                 }
-            } else if (enemy.isCollidingWithPlayerCorner(player)) {
-//                // 플레이어 꼭지점과 적 충돌 시 적 체력 감소
-//                enemy.decreaseHealth(10);
             }
 
             // 적 이동
@@ -167,6 +178,9 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
 
         // 플레이어 그리기
         player.draw(canvas);
+
+        // 무기 그리기
+        weapon.draw(canvas);
 
         // 적 그리기
         for (Enemy enemy : enemies) {
