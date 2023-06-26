@@ -10,17 +10,19 @@ public class Enemy {
     private int health;
     private int maxHealth;
     private int speed;
+    public int power;
     private Paint paint;
     private boolean invincible;
     private long invincibleEndTime;
     private int invincibleTime;
     private long lastCollisionTime;
 
-    public Enemy(int x, int y, int health) {
+    public Enemy(int x, int y, int health, int power) {
         paint = new Paint();
         rect = new Rect(x, y, x + 200, y + 200);
         this.health = health;
         this.maxHealth = health;
+        this.power = power;
         speed = 10;
         invincible = false;
         invincibleTime = 1000; // 1초 동안 무적 상태 유지
@@ -49,8 +51,8 @@ public class Enemy {
             int enemyX = rect.centerX();
             int enemyY = rect.centerY();
             double angle = Math.atan2(enemyY - playerY, enemyX - playerX);
-            int dx = (int) (400 * Math.cos(angle));
-            int dy = (int) (400 * Math.sin(angle));
+            int dx = (int) (player.pushBackDistance * Math.cos(angle));
+            int dy = (int) (player.pushBackDistance * Math.sin(angle));
             rect.offset(dx, dy);
         }
     }
@@ -73,13 +75,6 @@ public class Enemy {
     }
     public int getMaxHealth(){
         return maxHealth;
-    }
-
-    public boolean isCollidingWithPlayerCorner(Player player) {
-        int playerLeft = player.getRect().left;
-        int playerTop = player.getRect().top;
-
-        return rect.contains(playerLeft, playerTop);
     }
 
     public void moveTowardsPlayer(Player player) {

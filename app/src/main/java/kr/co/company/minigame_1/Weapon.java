@@ -15,12 +15,14 @@ public class Weapon {
     public int positionX;
     public int positionY;
     private Paint paint;
+    public int power;
 
     public Weapon(Player player) {
         this.player = player;
         this.angle = 0.0;
         this.weaponRect = new Rect();
         this.paint = new Paint();
+        this.power = 10;
         positionX = (weaponRect.left + weaponRect.right)/2;
         positionY = (weaponRect.top + weaponRect.bottom)/2;
 

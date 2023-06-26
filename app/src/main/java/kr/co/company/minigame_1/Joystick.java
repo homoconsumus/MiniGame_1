@@ -16,6 +16,7 @@ public class Joystick {
     }
 
     public void draw(Canvas canvas) {
+        paint.setAlpha(0);
         canvas.drawRect(bounds, paint);
     }
 
@@ -28,9 +29,5 @@ public class Joystick {
         bounds.top = top;
         bounds.right = right;
         bounds.bottom = bottom;
-    }
-
-    public void setColor(int color) {
-        paint.setColor(color);
     }
 }

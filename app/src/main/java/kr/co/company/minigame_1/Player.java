@@ -13,7 +13,8 @@ public class Player {
     private int sizeY = 200;
     public int positionX;
     public int positionY;
-    private int pushBackDistance;
+    public int pushBackDistance;
+    public int power;
 
     public Player() {
         paint = new Paint();
@@ -22,6 +23,7 @@ public class Player {
         positionY = (rect.top + rect.bottom)/2;
         health = 150;
         pushBackDistance = 100;
+        power = 14;
     }
 
     public Rect getRect(){
