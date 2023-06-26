@@ -64,7 +64,12 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         startTextPaint.setTextSize(50);
         startTextPaint.setTextAlign(Paint.Align.CENTER);
 
-        keypadInput = new KeypadInput();
+        // 화면 크기
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        screenWidth = displayMetrics.widthPixels;
+        screenHeight = displayMetrics.heightPixels;
+
+        keypadInput = new KeypadInput(screenWidth, screenHeight);
 
         player = new Player();
         weapon = new Weapon(player);
@@ -94,10 +99,6 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         Paint enemyHealthBarPaint5 = new Paint();
         enemyHealthBarPaint5.setColor(Color.parseColor("#F0F8FF"));
         enemyHealthBarPaints.add(enemyHealthBarPaint5);
-        // 화면 크기
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        screenWidth = displayMetrics.widthPixels;
-        screenHeight = displayMetrics.heightPixels;
     }
 
     @Override
