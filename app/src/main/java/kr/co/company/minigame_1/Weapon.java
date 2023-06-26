@@ -70,7 +70,6 @@ public class Weapon {
         paint.setColor(Color.RED);
         int centerX = weaponRect.centerX();
         int centerY = weaponRect.centerY();
-        System.out.println("Weapon center: (" + centerX + ", " + centerY + ")");
         canvas.drawCircle(weaponRect.centerX(), weaponRect.centerY(), weaponRect.width() / 2, paint);
     }
 }

@@ -77,6 +77,10 @@ public class Enemy {
         return maxHealth;
     }
 
+    public void setSpeed(int speed){
+        this.speed = speed;
+    }
+
     public void moveTowardsPlayer(Player player) {
         int playerX = player.getRect().centerX();
         int playerY = player.getRect().centerY();

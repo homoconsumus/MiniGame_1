@@ -1,6 +1,8 @@
 package kr.co.company.minigame_1;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -17,13 +19,18 @@ import java.util.concurrent.TimeUnit;
 
 public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     private GameThread gameThread;
-
+    private DatabaseHelper databaseHelper;
     private boolean isGameStarted;
+    private boolean isGameOver;
+    private boolean isShowKeypad;
     private Paint startTextPaint;
+    private KeypadInput keypadInput;
 
     private int enemyKillCount;
     private long gameStartTime;
     private long gameEndTime;
+    private String timeString;
+    private String playerName;
 
     private Player player;
     private Weapon weapon;
@@ -43,8 +50,12 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         super(context);
         getHolder().addCallback(this);
 
+        databaseHelper = new DatabaseHelper(context);
+
         enemyKillCount = 0;
         isGameStarted = false;
+        isGameOver = false;
+        isShowKeypad = false;
         gameStartTime = 0;
         gameEndTime = 0;
 
@@ -52,6 +63,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         startTextPaint.setColor(Color.WHITE);
         startTextPaint.setTextSize(50);
         startTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        keypadInput = new KeypadInput();
 
         player = new Player();
         weapon = new Weapon(player);
@@ -127,31 +140,59 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         float x = event.getX();
         float y = event.getY();
 
-        if(action == MotionEvent.ACTION_DOWN){
-            joystick = new Joystick((int) x - 100, (int) y - 100, (int) x + 200, (int) y + 200);
-            joystick_position_x = (int) x;
-            joystick_position_y = (int) y;
+        // joystick을 이용한 플레이어 컨트롤
+        if(player.getHealth() > 0){
+            if(action == MotionEvent.ACTION_DOWN){
+                joystick = new Joystick((int) x - 100, (int) y - 100, (int) x + 200, (int) y + 200);
+                joystick_position_x = (int) x;
+                joystick_position_y = (int) y;
+            }
+
+            switch (action) {
+                case MotionEvent.ACTION_MOVE:
+                    if (joystick.contains((int) x, (int) y)) {
+                        // 조이스틱을 움직이는 경우
+                        player.setPosition(player.positionX - (joystick_position_x - (int) x)/10, player.positionY - (joystick_position_y - (int) y)/10);
+                        joystick.setPosition((int) x - 100, (int) y - 100, (int) x + 200, (int) y + 200);
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                    // 손을 뗀 경우
+                    joystick.setPosition(0, 0, 0, 0); // Joystick 위치 초기화
+                    break;
+            }
         }
 
-        switch (action) {
-            case MotionEvent.ACTION_MOVE:
-                if (joystick.contains((int) x, (int) y)) {
-                    // 조이스틱을 움직이는 경우
-                    player.setPosition(player.positionX - (joystick_position_x - (int) x)/10, player.positionY - (joystick_position_y - (int) y)/10);
-                    System.out.println(player.positionX + " " + player.positionY);
-                    System.out.println("화면 넓이: " + screenWidth + " " + screenHeight);
-                    joystick.setPosition((int) x - 100, (int) y - 100, (int) x + 200, (int) y + 200);
+        // 게임오버 뒤 플레이어 이름 입력
+        if (isGameOver == true) {
+            if (action == MotionEvent.ACTION_DOWN) {
+                String character = keypadInput.getTouchedCharacter(x, y);
+                if (character != null) {
+                    if (character.equals("Del")) {
+                        keypadInput.deleteCharacter();
+                    } else if (character.equals("Set")) {
+                        playerName = keypadInput.setPlayerName();
+                        saveGameScore(playerName); // 데이터베이스에 정보 저장
+                        isShowKeypad = false;
+                    } else {
+                        keypadInput.addCharacter(character);
+                    }
                 }
-                break;
-            case MotionEvent.ACTION_UP:
-                // 손을 뗀 경우
-                joystick.setPosition(0, 0, 0, 0); // Joystick 위치 초기화
-                break;
+            }
         }
+
         return true;
     }
 
     public void update() {
+        // 플레이어 체력이 0이 됐을 때 기록을 저장하고 게임 오버 처리
+        if (player.getHealth() <= 0) {
+            // 게임 오버 처리
+            pauseGame();
+            // playerName = inputPlayerName(); // 플레이어 이름 입력 받기
+            return;
+        }
+
         gameEndTime = System.currentTimeMillis();
 
         // 무기 업데이트
@@ -173,8 +214,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         for (Iterator<Enemy> iterator = enemies.iterator(); iterator.hasNext(); ) {
             Enemy enemy = iterator.next();
             if (enemy.getHealth() <= 0) {
-                enemyKillCount += 1;
                 iterator.remove();
+                enemyKillCount += 1;
             } else if (weapon.isCollidingWith(enemy)) {
                 if (!enemy.isInvincible()) { // 적이 무적 상태가 아닌 경우에만 충돌 처리
                     // 무기와 적 충돌 시 체력 감소
@@ -190,20 +231,37 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
                     // 충돌한 적은 잠시 무적시간
                     enemy.handleCollision(player);
                 }
-                // 플레이어 체력 감소 시 게임 오버 처리
-                if (player.getHealth() <= 0) {
-                    // 게임 오버 처리
+                if(player.getHealth() <= 0){
+                    isGameOver = true;
+                    isShowKeypad = true;
                 }
             }
-
             // 적 이동
             enemy.moveTowardsPlayer(player);
         }
+    }
 
-        // 플레이어 체력 감소 시 게임 오버 처리
-        if (player.getHealth() <= 0) {
-            // 게임 오버 처리
-        }
+    private void saveGameScore(String playerName) {
+        // 데이터베이스에 정보 저장
+        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("playerName", playerName);
+        values.put("enemyKillCount", enemyKillCount);
+        values.put("timeString", timeString);
+        db.insert("game_scores", null, values);
+        db.close();
+    }
+
+    // 다음 게임을 위해 모든 변수와 객체 초기화하는 메서드
+    private void resetGame() {
+        player = new Player();
+        weapon = new Weapon(player);
+        enemies.clear();
+        enemyKillCount = 0;
+        gameStartTime = 0;
+        gameEndTime = 0;
+        isGameOver = false;
+        playerName = null;
     }
 
     @Override
@@ -216,8 +274,17 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
             return;
         }
 
+        // 게임오버 시 플레이어 이름 입력
+        if (isShowKeypad) {
+            keypadInput.setCanvas(canvas);
+            keypadInput.draw(canvas);
+        }
+
         // 플레이어 그리기
-        player.draw(canvas);
+        if(player != null){
+            player.draw(canvas);
+            drawPlayerHealthBar(canvas);
+        }
 
         // 무기 그리기
         weapon.draw(canvas);
@@ -226,15 +293,14 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         for (Enemy enemy : enemies) {
             enemy.draw(canvas);
         }
+        // 적 체력바 그리기
+        drawEnemyHealthBars(canvas);
 
         // Joystick 그리기
         joystick.draw(canvas);
 
         drawActionGameInfo(canvas);
 
-        // 체력바 그리기
-        drawPlayerHealthBar(canvas);
-        drawEnemyHealthBars(canvas);
     }
 
     private void drawStartScreen(Canvas canvas) {
@@ -261,7 +327,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
             long minutes = TimeUnit.MILLISECONDS.toMinutes(playTime) % 60;
             long hours = TimeUnit.MILLISECONDS.toHours(playTime);
 
-            String timeString = String.format("Play Time: %02d:%02d:%02d", hours, minutes, seconds);
+            timeString = String.format("Play Time: %02d:%02d:%02d", hours, minutes, seconds);
             canvas.drawText(timeString, 50, 90, infoPaint);
         }
     }
@@ -316,6 +382,15 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         return dp * (context.getResources().getDisplayMetrics().densityDpi / 160f);
     }
 
+    // 게임 내적인 시작과 정지
+    private void pauseGame() {
+        // enemy들의 위치 고정
+        for (Enemy enemy : enemies) {
+            enemy.setSpeed(0); // enemy의 이동 속도를 0으로 설정하여 움직이지 않도록 함
+        }
+    }
+
+    // 서페이스의 시작과 정지
     public void resume() {
         gameThread = new GameThread(getHolder(), this);
         gameThread.setRunning(true);
