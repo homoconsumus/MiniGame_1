@@ -33,4 +33,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(dropTableQuery);
         onCreate(db);
     }
+
+    @Override
+    public SQLiteDatabase getReadableDatabase(){
+        return super.getReadableDatabase();
+    }
 }

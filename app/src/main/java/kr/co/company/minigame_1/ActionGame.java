@@ -2,6 +2,7 @@ package kr.co.company.minigame_1;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -24,6 +25,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     private boolean isGameOver;
     private boolean isShowKeypad;
     private Paint startTextPaint;
+    private Paint scoreTextPaint;
     private KeypadInput keypadInput;
 
     private int enemyKillCount;
@@ -63,6 +65,11 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         startTextPaint.setColor(Color.WHITE);
         startTextPaint.setTextSize(50);
         startTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        scoreTextPaint = new Paint();
+        scoreTextPaint.setColor(Color.WHITE);
+        scoreTextPaint.setTextSize(50);
+        scoreTextPaint.setTextAlign(Paint.Align.CENTER);
 
         // 화면 크기
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
@@ -114,6 +121,14 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         screenHeight = height;
     }
 
+    public void restartSurfaceView() {
+        // SurfaceView 초기화 작업 수행
+        // 필요한 리소스 초기화 등
+
+        // SurfaceView 다시 그리기
+        invalidate();
+    }
+
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         boolean retry = true;
@@ -134,6 +149,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         if (!isGameStarted && event.getAction() == MotionEvent.ACTION_DOWN) {
             isGameStarted = true;
             gameStartTime = System.currentTimeMillis();
+            resetGame();
+            resumeGame();
             return true;
         }
 
@@ -175,6 +192,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
                         playerName = keypadInput.setPlayerName();
                         saveGameScore(playerName); // 데이터베이스에 정보 저장
                         isShowKeypad = false;
+                        restartSurfaceView();
+                        isGameStarted=false;
                     } else {
                         keypadInput.addCharacter(character);
                     }
@@ -201,7 +220,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         weapon.update();
 
         // 적 생성
-        if(enemies.size()<5){
+        if(enemies.size()<5 && isGameStarted==true){
             Random random = new Random();
             int enemyX = screenWidth;
             int enemyY = random.nextInt(screenHeight);
@@ -253,6 +272,40 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         db.close();
     }
 
+    public List<ScoreData> getTopScores() {
+        List<ScoreData> topScores = new ArrayList<>();
+
+        SQLiteDatabase db = databaseHelper.getReadableDatabase();
+        String query = "SELECT DISTINCT * FROM game_scores ORDER BY enemyKillCount DESC LIMIT 15";
+        Cursor cursor = db.rawQuery(query, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                int playerNameIndex = cursor.getColumnIndex("playerName");
+                int enemyKillCountIndex = cursor.getColumnIndex("enemyKillCount");
+                int timeStringIndex = cursor.getColumnIndex("timeString");
+
+                // 컬럼 인덱스가 -1인 경우 데이터를 가져오지 않음
+                if (playerNameIndex >= 0 && enemyKillCountIndex >= 0 && timeStringIndex >= 0) {
+                    String playerName = cursor.getString(playerNameIndex);
+                    int enemyKillCount = cursor.getInt(enemyKillCountIndex);
+                    String timeString = cursor.getString(timeStringIndex);
+
+                    ScoreData scoreData = new ScoreData(playerName, enemyKillCount, timeString);
+                    topScores.add(scoreData);
+                }
+                else {
+                    ScoreData scoreData = new ScoreData(playerName, enemyKillCount, timeString);
+                    topScores.add(scoreData);
+                }
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+
+        return topScores;
+    }
+
     // 다음 게임을 위해 모든 변수와 객체 초기화하는 메서드
     private void resetGame() {
         player = new Player();
@@ -260,6 +313,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         enemies.clear();
         enemyKillCount = 0;
         gameStartTime = 0;
+        gameStartTime = System.currentTimeMillis();
         gameEndTime = 0;
         isGameOver = false;
         playerName = null;
@@ -305,7 +359,25 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     private void drawStartScreen(Canvas canvas) {
-        canvas.drawText("화면을 눌러 시작", screenWidth / 2, screenHeight / 2, startTextPaint);
+        canvas.drawText("화면을 눌러 시작", screenWidth / 2, screenHeight / 10, startTextPaint);
+
+        // 최상위 15개의 데이터 가져오기
+        List<ScoreData> topScores = getTopScores();
+
+        // 최상위 15개 데이터 그리기
+        float startY = 400; // 시작 Y 좌표 설정
+        float lineHeight = 60; // 각 데이터의 높이 설정
+        int rank = 1; // 순위
+
+        for (ScoreData score : topScores) {
+            String scoreText = rank + ". " + score.getPlayerName() + " - " + score.getEnemyKillCount() + " - " + score.getTimeString();
+
+            // scoreTextPaint를 사용하여 데이터 그리기
+            canvas.drawText(scoreText, screenWidth / 2, startY, scoreTextPaint);
+
+            startY += lineHeight;
+            rank++;
+        }
     }
 
     private void drawActionGameInfo(Canvas canvas) {
@@ -388,6 +460,13 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         // enemy들의 위치 고정
         for (Enemy enemy : enemies) {
             enemy.setSpeed(0); // enemy의 이동 속도를 0으로 설정하여 움직이지 않도록 함
+        }
+    }
+
+    private void resumeGame() {
+        // enemy들의 위치 고정
+        for (Enemy enemy : enemies) {
+            enemy.setSpeed(10); // enemy의 이동 속도를 0으로 설정하여 움직이지 않도록 함
         }
     }
 
