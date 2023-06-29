@@ -3,6 +3,7 @@ package kr.co.company.minigame_1;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 
 public class KeypadInput {
     private String[][] keypad = {
@@ -36,7 +37,9 @@ public class KeypadInput {
 
         Paint paint = new Paint();
         paint.setTextSize(50);
-        paint.setColor(Color.WHITE);
+        paint.setColor(Color.parseColor("#8B4513"));
+        paint.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
+
 
         // 키패드 그리기
         for (int i = 0; i < keypadHeight; i++) {

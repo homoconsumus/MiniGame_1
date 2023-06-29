@@ -1,11 +1,15 @@
 package kr.co.company.minigame_1;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 
 public class Player {
+    private Context context;
     private Rect rect;
     private int health;
     private Paint paint;
@@ -16,7 +20,8 @@ public class Player {
     public int pushBackDistance;
     public int power;
 
-    public Player() {
+    public Player(Context context) {
+        this.context = context;
         paint = new Paint();
         rect = new Rect(100 - sizeX/2, 100 - sizeY/2, 100 + sizeX/2, 100 + sizeY/2);
         positionX = (rect.left + rect.right)/2;
@@ -72,7 +77,9 @@ public class Player {
     }
 
     public void draw(Canvas canvas) {
-        paint.setColor(Color.RED);
-        canvas.drawRect(rect, paint);
+//        paint.setColor(Color.RED);
+        Bitmap playerBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.player);
+        canvas.drawBitmap(playerBitmap, null, rect, paint);
+//        canvas.drawRect(rect, paint);
     }
 }

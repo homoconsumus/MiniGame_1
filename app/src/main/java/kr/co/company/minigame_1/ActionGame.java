@@ -4,9 +4,12 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -33,6 +36,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     private long gameEndTime;
     private String timeString;
     private String playerName;
+
+    private Bitmap background;
 
     private Player player;
     private Weapon weapon;
@@ -62,12 +67,14 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         gameEndTime = 0;
 
         startTextPaint = new Paint();
-        startTextPaint.setColor(Color.WHITE);
+        startTextPaint.setColor(Color.parseColor("#8B4513"));
+        startTextPaint.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
         startTextPaint.setTextSize(50);
         startTextPaint.setTextAlign(Paint.Align.CENTER);
 
         scoreTextPaint = new Paint();
-        scoreTextPaint.setColor(Color.WHITE);
+        scoreTextPaint.setColor(Color.parseColor("#8B4513"));
+        scoreTextPaint.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
         scoreTextPaint.setTextSize(50);
         scoreTextPaint.setTextAlign(Paint.Align.CENTER);
 
@@ -75,10 +82,12 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
         screenWidth = displayMetrics.widthPixels;
         screenHeight = displayMetrics.heightPixels;
+        background = BitmapFactory.decodeResource(getResources(), R.drawable.gamebg);
+        background = Bitmap.createScaledBitmap(background, screenWidth, screenHeight, true);
 
         keypadInput = new KeypadInput(screenWidth, screenHeight);
 
-        player = new Player();
+        player = new Player(getContext().getApplicationContext());
         weapon = new Weapon(player);
         enemies = new ArrayList<>();
 
@@ -308,7 +317,7 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
 
     // 다음 게임을 위해 모든 변수와 객체 초기화하는 메서드
     private void resetGame() {
-        player = new Player();
+        player = new Player(getContext().getApplicationContext());
         weapon = new Weapon(player);
         enemies.clear();
         enemyKillCount = 0;
@@ -322,7 +331,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        canvas.drawColor(Color.BLACK);
+//        canvas.drawColor(Color.BLACK);
+        canvas.drawBitmap(background, 0, 0, null);
 
         if (!isGameStarted) {
             drawStartScreen(canvas);
@@ -386,7 +396,8 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
         }
 
         Paint infoPaint = new Paint();
-        infoPaint.setColor(Color.WHITE);
+        infoPaint.setColor(Color.parseColor("#8B4513"));
+        infoPaint.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
         infoPaint.setTextSize(50);
 
         // 킬카운트
@@ -406,9 +417,9 @@ public class ActionGame extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     private void drawPlayerHealthBar(Canvas canvas) {
-        int healthBarWidth = (int) convertDpToPixel(100, getContext());
-        int healthBarHeight = (int) convertDpToPixel(10, getContext());
-        int healthBarX = 50;
+        int healthBarWidth = (int) convertDpToPixel(200, getContext());
+        int healthBarHeight = (int) convertDpToPixel(20, getContext());
+        int healthBarX = 500;
         int healthBarY = screenHeight - 100;
 
         int playerHealth = player.getHealth();
